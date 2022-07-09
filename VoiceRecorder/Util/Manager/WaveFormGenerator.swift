@@ -18,7 +18,7 @@ final class WaveFormGenerator {
     
     private func readBuffer(_ audioURL: URL) -> [Float] {
         // TODO: 1. fileURL을 받아서 해당 오디오 파일의 메모리에 접근한다.
-        let file = try! AVAudioFile(forReading: audioURL)
+        guard let file = try? AVAudioFile(forReading: audioURL) else { return [] }
         let audioFormat = file.processingFormat
         let audioFrameCount = UInt32(file.length)
         guard let buffer = AVAudioPCMBuffer(

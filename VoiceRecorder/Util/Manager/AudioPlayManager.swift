@@ -7,54 +7,124 @@
 
 import AVFoundation
 
-struct AudioPlayManager {
+protocol AudioPlayDelegate: AnyObject {
+    
+    func updateCurrentTime()
+}
+
+final class AudioPlayManager {
+    
+    weak var delegate: AudioPlayDelegate?
     
     let audioURL: URL
     
     let engine = AVAudioEngine()
     var audioFile: AVAudioFile?
     
+    private var needsFileScheduled = true
+    
     var unitTimePitch = AVAudioUnitTimePitch()
-    let speedControl = AVAudioUnitVarispeed()
+//    let speedControl = AVAudioUnitVarispeed()
     let audioPlayer = AVAudioPlayerNode()
     
+    var playerProgress: Double = 0
+//    var playerTime: PlayerTime = .zero
+    private var displayLink: CADisplayLink?
+    private var audioLengthSamples: AVAudioFramePosition = 0
     private var audioSampleRate: Double = 0
+    private var audioLengthSeconds: Double = 0
     private var seekFrame: AVAudioFramePosition = 0
     private var currentPosition: AVAudioFramePosition = 0
-    private var audioLengthSamples: AVAudioFramePosition = 0
     
-    init(audioURL: URL) {
-        self.audioURL = audioURL
-        do {
-           try setupAudio(audioURL)
-        }catch {
+    private var currentFrame: AVAudioFramePosition {
+        guard
+          let lastRenderTime = audioPlayer.lastRenderTime,
+          let playerTime = audioPlayer.playerTime(forNodeTime: lastRenderTime)
+        else {
+            return .zero
+        }
 
+        return playerTime.sampleTime
+    }
+    
+    var currentTime: Double = 0 {
+        didSet {
+            delegate?.updateCurrentTime()
         }
     }
     
-    mutating func setupAudio(_ url: URL) throws {
-        audioFile = try AVAudioFile(forReading: url)
-        
-        guard let file = audioFile else {return}
+    init(audioURL: URL) {
+        self.audioURL = audioURL
+        setupAudio(audioURL)
+        setupDisplayLink()
+    }
+    
+    private func setupAudio(_ url: URL) {
+        audioFile = try? AVAudioFile(forReading: url)
+        guard let file = audioFile else { return }
         let format = file.processingFormat
         
         audioLengthSamples = file.length
         audioSampleRate = format.sampleRate
+        audioLengthSeconds = Double(audioLengthSamples) / audioSampleRate
         
         audioFile = file
-
+        
+        configureEngine(with: format)
+    }
+    
+    private func configureEngine(with format: AVAudioFormat) {
         engine.attach(audioPlayer)
         engine.attach(unitTimePitch)
-        engine.attach(speedControl)
+
+        engine.connect(audioPlayer, to: unitTimePitch, format: format)
+        engine.connect(unitTimePitch, to: engine.mainMixerNode, format: format)
+
+        engine.prepare()
         
-        engine.connect(audioPlayer, to: speedControl, format: nil)
-        engine.connect(speedControl, to: unitTimePitch, format: nil)
-        engine.connect(unitTimePitch, to: engine.mainMixerNode, format: nil)
-        
-        audioPlayer.scheduleFile(file, at: nil)
-        
-        try engine.start()
+        do {
+            try engine.start()
+            scheduleAudioFile()
+        } catch {
+            print("Error starting the player: \(error.localizedDescription)")
+        }
     }
+    
+    private func scheduleAudioFile() {
+        guard let file = audioFile, needsFileScheduled else {
+            return
+        }
+
+        needsFileScheduled = false
+        seekFrame = 0
+
+        audioPlayer.scheduleFile(file, at: nil) {
+            self.needsFileScheduled = true
+        }
+    }
+    
+    private func setupDisplayLink() {
+        displayLink = CADisplayLink(target: self, selector: #selector(updateDisplay))
+        displayLink?.add(to: .main, forMode: .default)
+        displayLink?.isPaused = true
+    }
+
+    @objc func updateDisplay() {
+        currentPosition = currentFrame + seekFrame
+        currentPosition = max(currentPosition, 0)
+        currentPosition = min(currentPosition, audioLengthSamples)
+
+        if currentPosition >= audioLengthSamples {
+            audioPlayer.stop()
+
+            seekFrame = 0
+
+            displayLink?.isPaused = true
+        }
+
+        currentTime = Double(currentPosition) / audioSampleRate
+    }
+    
     
     func changePitch(to pitch: Int) {
         switch pitch {
@@ -71,25 +141,23 @@ struct AudioPlayManager {
         audioPlayer.volume = volume
     }
     
-    mutating func seek(to time: Double) {
+    func seek(to time: Double) {
         guard let audioFile = audioFile else {
             return
         }
-        
+
         let offset = AVAudioFramePosition(time * audioSampleRate)
-        
+
         seekFrame = currentPosition + offset
         seekFrame = max(seekFrame, 0)
         seekFrame = min(seekFrame, audioLengthSamples)
         currentPosition = seekFrame
-        
+
         let wasPlaying = audioPlayer.isPlaying
         audioPlayer.stop()
-        
-        
-        
+
         if currentPosition < audioLengthSamples {
-            
+
             let frameCount = AVAudioFrameCount(audioLengthSamples - seekFrame)
             audioPlayer.scheduleSegment(
                 audioFile,
@@ -97,7 +165,7 @@ struct AudioPlayManager {
                 frameCount: frameCount,
                 at: nil
             )
-            
+
             if wasPlaying {
                 audioPlayer.play()
             }
@@ -105,23 +173,15 @@ struct AudioPlayManager {
     }
     
     func play() {
+        displayLink?.isPaused = false
+        if needsFileScheduled {
+//            scheduleAudioFile()
+        }
         audioPlayer.play()
     }
     
     func pause() {
+        displayLink?.isPaused = true
         audioPlayer.pause()
-    }
-
-    func currentTime() -> Double {
-        
-        guard let nodeTime = audioPlayer.lastRenderTime,
-              let playerTime = audioPlayer.playerTime(forNodeTime: nodeTime) else {
-            return .zero
-        }
-        
-        let sampleRate = audioPlayer.outputFormat(forBus: 0).sampleRate
-        
-        let currentTime = Double(playerTime.sampleTime) / sampleRate
-        return currentTime
     }
 }

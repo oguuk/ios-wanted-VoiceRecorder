@@ -41,10 +41,13 @@ final class PlayViewController: BaseViewController {
             print(duration)
             if currentTime < duration {
                 UIView.animate(withDuration: 1.4) {
-                    audioWaveScrollView.contentOffset.x = (audioWaveScrollView.contentSize.width * (currentTime / duration))
+                    audioWaveScrollView.contentOffset.x
+                    = (audioWaveScrollView.contentSize.width - (UIScreen.main.bounds.width / 2)) * (currentTime / duration)
                 }
-            } else {
-                self.playView.startButton.setImage(UIImage(systemName: "play"), for: .normal)
+            } else if currentTime == duration {
+                DispatchQueue.main.async {
+                    self.playView.startButton.setImage(UIImage(systemName: "play"), for: .normal)
+                }
                 self.viewModel?.pause()
             }
         }
