@@ -11,15 +11,6 @@ struct AudioPlayManager {
     
     let audioURL: URL
     
-    init(audioURL: URL) {
-        self.audioURL = audioURL
-        do {
-           try setupAudio(audioURL)
-        }catch {
-            
-        }
-    }
-    
     let engine = AVAudioEngine()
     var audioFile: AVAudioFile?
     
@@ -31,15 +22,15 @@ struct AudioPlayManager {
     private var seekFrame: AVAudioFramePosition = 0
     private var currentPosition: AVAudioFramePosition = 0
     private var audioLengthSamples: AVAudioFramePosition = 0
-        
-    private var rawWaveformDataArray = [Float]()
-    private var resampledDataArray = [Float]()
-    private var waveformDataArray = [Float]()
     
-    private var waveforms = [CALayer]()
-    
-    private var shouldAutoUpdateWaveform = true
-    private var currentPlaybackTime: CMTime?
+    init(audioURL: URL) {
+        self.audioURL = audioURL
+        do {
+           try setupAudio(audioURL)
+        }catch {
+
+        }
+    }
     
     mutating func setupAudio(_ url: URL) throws {
         audioFile = try AVAudioFile(forReading: url)
@@ -95,6 +86,8 @@ struct AudioPlayManager {
         let wasPlaying = audioPlayer.isPlaying
         audioPlayer.stop()
         
+        
+        
         if currentPosition < audioLengthSamples {
             
             let frameCount = AVAudioFrameCount(audioLengthSamples - seekFrame)
@@ -117,5 +110,18 @@ struct AudioPlayManager {
     
     func pause() {
         audioPlayer.pause()
+    }
+
+    func currentTime() -> Double {
+        
+        guard let nodeTime = audioPlayer.lastRenderTime,
+              let playerTime = audioPlayer.playerTime(forNodeTime: nodeTime) else {
+            return .zero
+        }
+        
+        let sampleRate = audioPlayer.outputFormat(forBus: 0).sampleRate
+        
+        let currentTime = Double(playerTime.sampleTime) / sampleRate
+        return currentTime
     }
 }

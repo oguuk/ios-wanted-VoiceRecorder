@@ -11,7 +11,9 @@ import AVFoundation
 final class PlayViewModel {
     
     var audioInformation: AudioInformation
-    var audioPlayManager: AudioPlayManager
+    var currentTime: Observable<Double> = Observable(.zero)
+    private var audioPlayManager: AudioPlayManager
+    private var timer: Timer?
     
     init(audioInformation: AudioInformation) {
         self.audioInformation = audioInformation
@@ -28,14 +30,24 @@ final class PlayViewModel {
     
     func move(seconds: Double) {
         audioPlayManager.seek(to: seconds)
+        updateCurrentTime()
     }
     
     func play() {
         audioPlayManager.play()
+        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { timer in
+            self.updateCurrentTime()
+        }
+        timer?.tolerance = 0.1
     }
     
     func pause() {
         audioPlayManager.pause()
+        currentTime.value += 0.01
+        timer?.invalidate()
     }
-
+    
+    private func updateCurrentTime() {
+        currentTime.value = audioPlayManager.currentTime()
+    }
 }

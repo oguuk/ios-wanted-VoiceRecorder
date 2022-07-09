@@ -15,18 +15,30 @@ final class PlayView: UIView, ViewPresentable {
         return label
     }()
     
-     let segmentedContoller: UISegmentedControl = {
+    let audioWaveScrollView: UIScrollView = {
+        let scrollView = UIScrollView()
+        scrollView.backgroundColor = .systemGray6
+        scrollView.showsHorizontalScrollIndicator = false
+        return scrollView
+    }()
+    
+    let audioWaveImageView: UIImageView = {
+        let imageView = UIImageView()
+        return imageView
+    }()
+    
+    let segmentedContoller: UISegmentedControl = {
         let segment = UISegmentedControl(items: ["일반 목소리","아기 목소리","할아버지 목소리"])
         return segment
     }()
     
-     let goforward5Button:UIButton = {
+    let goforward5Button:UIButton = {
         let button = UIButton()
         button.setImage(UIImage(systemName: "goforward.5"), for: .normal)
         return button
     }()
     
-     let goBackrward5Button:UIButton = {
+    let goBackrward5Button:UIButton = {
         let button = UIButton()
         button.setImage(UIImage(systemName: "gobackward.5"), for: .normal)
         return button
@@ -49,13 +61,13 @@ final class PlayView: UIView, ViewPresentable {
          return stackView
     }()
     
-     let startButton : UIButton = {
+    let startButton : UIButton = {
         let button = UIButton()
         button.setImage(UIImage(systemName: "play"), for: .normal)
         return button
     }()
     
-     let slider : UISlider = {
+    let slider : UISlider = {
         let slider = UISlider()
         slider.minimumValue = 0
         slider.maximumValue = 10
@@ -75,7 +87,10 @@ final class PlayView: UIView, ViewPresentable {
     }
 
     func setupView() {
-        [titleLabel,verticalStackView].forEach {
+        audioWaveImageView.translatesAutoresizingMaskIntoConstraints = false
+        audioWaveScrollView.addSubview(audioWaveImageView)
+        
+        [titleLabel, audioWaveScrollView, verticalStackView].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             addSubview($0)
         }
@@ -94,6 +109,16 @@ final class PlayView: UIView, ViewPresentable {
     func setupConstraints() {
         titleLabel.topAnchor.constraint(equalTo: self.topAnchor, constant: 20).isActive = true
         titleLabel.centerXAnchor.constraint(equalTo: self.centerXAnchor).isActive = true
+        
+        audioWaveScrollView.centerYAnchor.constraint(equalTo: self.centerYAnchor).isActive = true
+        audioWaveScrollView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 10).isActive = true
+        audioWaveScrollView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -10).isActive = true
+        audioWaveScrollView.heightAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.4).isActive = true
+        
+        audioWaveImageView.leadingAnchor.constraint(equalTo: audioWaveScrollView.centerXAnchor).isActive = true
+        audioWaveImageView.trailingAnchor.constraint(equalTo: audioWaveScrollView.trailingAnchor).isActive = true
+        audioWaveImageView.topAnchor.constraint(equalTo: audioWaveScrollView.topAnchor).isActive = true
+        audioWaveImageView.bottomAnchor.constraint(equalTo: audioWaveScrollView.bottomAnchor).isActive = true
         
         slider.leadingAnchor.constraint(equalTo: verticalStackView.leadingAnchor).isActive = true
         slider.trailingAnchor.constraint(equalTo: verticalStackView.trailingAnchor).isActive = true

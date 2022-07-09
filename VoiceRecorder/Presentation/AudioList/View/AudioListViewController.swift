@@ -11,7 +11,7 @@ final class AudioListViewController: BaseViewController {
     
     private let audioListView = AudioListView()
     
-    let viewModel = AudioListViewModel<FirebaseRepository>()
+    let viewModel = AudioListViewModel<FirebaseRepository>(repository: FirebaseRepository())
     
     override func loadView() {
         self.view = audioListView

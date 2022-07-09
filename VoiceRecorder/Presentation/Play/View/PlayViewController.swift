@@ -9,9 +9,8 @@ import UIKit
 
 final class PlayViewController: BaseViewController {
     
-    private let playView = PlayView()
     var viewModel: PlayViewModel?
-    
+    private let playView = PlayView()
     private var isPlaying = false
     
     override func loadView() {
@@ -20,19 +19,57 @@ final class PlayViewController: BaseViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        addTargetToSubviews()
+        generateWaveForm()
+        bindWithViewModel()
+    }
+
+    func addTargetToSubviews() {
         playView.startButton.addTarget(self, action: #selector(startButtonTapped), for: .touchUpInside)
-        
         playView.goBackrward5Button.addTarget(self, action: #selector(move5SecondsBackward), for: .touchUpInside)
-        
         playView.goforward5Button.addTarget(self, action: #selector(move5SecondsForward), for: .touchUpInside)
-        
         playView.slider.addTarget(self, action: #selector(sliderValueChanged(sender:)), for: .touchUpInside)
-        
         playView.segmentedContoller.addTarget(self, action: #selector(segmentedControlValueChanged(sender:)), for: .valueChanged)
     }
+
+    func bindWithViewModel() {
+        guard let duration = viewModel?.audioInformation.duration else { return }
+        let audioWaveScrollView = playView.audioWaveScrollView
+        
+        viewModel?.currentTime.bind { currentTime in
+            print(currentTime)
+            print(duration)
+            if currentTime < duration {
+                UIView.animate(withDuration: 1.4) {
+                    audioWaveScrollView.contentOffset.x = (audioWaveScrollView.contentSize.width * (currentTime / duration))
+                }
+            } else {
+                self.playView.startButton.setImage(UIImage(systemName: "play"), for: .normal)
+                self.viewModel?.pause()
+            }
+        }
+    }
     
-    @objc private func startButtonTapped(sender: UIButton){
+    func generateWaveForm() {
+        guard let fileURL = viewModel?.audioInformation.fileURL else { return }
+        guard let duration = viewModel?.audioInformation.duration else { return }
+        
+        let image = WaveFormGenerator().generateWaveImage(
+            from: fileURL,
+            in: CGSize(
+                width: UIScreen.main.bounds.width * duration / 3.5,
+                height: UIScreen.main.bounds.width * 0.4
+            )
+        )
+        playView.audioWaveImageView.image = image
+    }
+}
+
+// MARK: - AddTarget selector methods
+
+extension PlayViewController {
+
+    @objc private func startButtonTapped(sender: UIButton) {
         if isPlaying {
             sender.setImage(UIImage(systemName: "play"), for: .normal)
             viewModel?.pause()
@@ -58,5 +95,4 @@ final class PlayViewController: BaseViewController {
     @objc private func move5SecondsBackward() {
         viewModel?.move(seconds: -5)
     }
-
 }
