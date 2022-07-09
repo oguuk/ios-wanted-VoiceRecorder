@@ -17,8 +17,7 @@ Firebase Storage를 활용해 녹음 파일을 관리할 수 있는 녹음기 �
 ![Xcode 13.3](https://img.shields.io/badge/Xcode-13.3-blue)
 ![Firebase](https://img.shields.io/badge/Firebase-9.3.0-orange)
 
+
 #기능
-
-
 - 프로젝트 소개
 - 기타 내용은 팀 내부에서 자율적으로 작성하시면 됩니다.
